@@ -1,0 +1,8 @@
+D:\Users\nkurdadze\Documents\Visual Studio 2015\Projects\Invoice Income Correction\Invoice Income Correction\bin\x86\Debug\Invoice Income Correction.exe
+D:\Users\nkurdadze\Documents\Visual Studio 2015\Projects\Invoice Income Correction\Invoice Income Correction\bin\x86\Debug\Invoice Income Correction.pdb
+D:\Users\nkurdadze\Documents\Visual Studio 2015\Projects\Invoice Income Correction\Invoice Income Correction\bin\x86\Debug\SAPApi.dll
+D:\Users\nkurdadze\Documents\Visual Studio 2015\Projects\Invoice Income Correction\Invoice Income Correction\bin\x86\Debug\SAPBusinessOneSDK.dll
+D:\Users\nkurdadze\Documents\Visual Studio 2015\Projects\Invoice Income Correction\Invoice Income Correction\bin\x86\Debug\ConverterLib_x64.dll
+D:\Users\nkurdadze\Documents\Visual Studio 2015\Projects\Invoice Income Correction\Invoice Income Correction\bin\x86\Debug\SAPApi.pdb
+D:\Users\nkurdadze\Documents\Visual Studio 2015\Projects\Invoice Income Correction\Invoice Income Correction\obj\x86\Debug\Invoice Income Correction.exe
+D:\Users\nkurdadze\Documents\Visual Studio 2015\Projects\Invoice Income Correction\Invoice Income Correction\obj\x86\Debug\Invoice Income Correction.pdb
