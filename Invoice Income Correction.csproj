@@ -119,6 +119,7 @@
     <Compile Include="InvoiceJdtCorrection.b1f.cs">
       <DependentUpon>InvoiceJdtCorrection.b1f</DependentUpon>
     </Compile>
+    <Compile Include="PeymentsEntryReconsilation.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Menu.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

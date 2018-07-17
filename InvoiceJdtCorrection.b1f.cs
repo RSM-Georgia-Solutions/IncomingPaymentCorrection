@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Xml;
 using SAPApi;
 using SAPbobsCOM;
 using SAPbouiCOM;
 using SAPbouiCOM.Framework;
 using Application = SAPbouiCOM.Framework.Application;
+using System.Media;
 
 namespace Invoice_Income_Correction
 {
@@ -36,6 +36,8 @@ namespace Invoice_Income_Correction
             this.Button0 = ((SAPbouiCOM.Button)(this.GetItem("Item_7").Specific));
             this.Button0.PressedAfter += new SAPbouiCOM._IButtonEvents_PressedAfterEventHandler(this.Button0_PressedAfter);
             this.PictureBox1 = ((SAPbouiCOM.PictureBox)(this.GetItem("Item_11").Specific));
+            this.Button1 = ((SAPbouiCOM.Button)(this.GetItem("Item_8").Specific));
+            this.Button1.PressedAfter += new SAPbouiCOM._IButtonEvents_PressedAfterEventHandler(this.Button1_PressedAfter);
             this.OnCustomInitialize();
 
         }
@@ -67,7 +69,7 @@ namespace Invoice_Income_Correction
             GetItem("Item_7").FontSize = 10;
             string path = System.IO.Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
             PictureBox1.Picture = "" + path + "\\RSMxxxx.jpg";
-     //       PictureBox1.Picture = @"D:\Users\nkurdadze\Desktop\RSMxxxx.jpg";
+            //       PictureBox1.Picture = @"D:\Users\nkurdadze\Desktop\RSMxxxx.jpg";
         }
 
         private void RefreshForm()
@@ -103,11 +105,11 @@ namespace Invoice_Income_Correction
                           ") as foo on foo.[Payment JournalEntry Number] = boo.[Payment JournalEntry Number]";
                 Grid0.DataTable.ExecuteQuery(DIManager.QueryHanaTransalte(MergedQuerys));
                 SAPbouiCOM.EditTextColumn incomingPayment = (EditTextColumn)Grid0.Columns.Item("PaymentDocEntry");
-                incomingPayment.LinkedObjectType =   "24" ;
+                incomingPayment.LinkedObjectType = "24";
             }
 
-         
-           
+
+
             else
             {
                 DateTime dt = new DateTime(Convert.ToInt32(ComboBox0.Value), Convert.ToInt32(ComboBox1.Value), 1);
@@ -194,7 +196,6 @@ namespace Invoice_Income_Correction
                 Recordset recordset =
                     (Recordset)Program.DiCompany.GetBusinessObject(BoObjectTypes
                         .BoRecordset);
-
                 recordset.DoQuery(DIManager.QueryHanaTransalte($@"SELECT * FROM [@RSM_IPHY] WHERE U_PaymentTransId = {paymentTransId}"));
 
                 string corTr = recordset.Fields.Item("U_CorrectionTransId").Value.ToString();
@@ -253,16 +254,21 @@ namespace Invoice_Income_Correction
 
                 if (!recordset.EoF && corTr == "0")
                 {
-                    Dictionary<string, dynamic> iphyInster = new Dictionary<string, dynamic>();
-                    iphyInster.Add("CardCode", cardCode);
-                    iphyInster.Add("CardName", CardName);
-                    iphyInster.Add("PaymentDocEntry", PaymentDocEntry);
-                    iphyInster.Add("PaymentDocNum", PaymentNumber);
-                    iphyInster.Add("Select", Select);
-                    iphyInster.Add("PaymentTransId", paymentTransId);
-                    iphyInster.Add("CorrectionTransId", result);
-                    iphyInster.Add("DocDate", new DateTime(Convert.ToInt32(ComboBox0.Value), Convert.ToInt32(ComboBox1.Value), 1));
-                    iphyInster.Add("InvType", isIncoming ? "13" : "18");
+                    Dictionary<string, dynamic> iphyInster = new Dictionary<string, dynamic>
+                    {
+                        {"CardCode", cardCode},
+                        {"CardName", CardName},
+                        {"PaymentDocEntry", PaymentDocEntry},
+                        {"PaymentDocNum", PaymentNumber},
+                        {"Select", Select},
+                        {"PaymentTransId", paymentTransId},
+                        {"CorrectionTransId", result},
+                        {
+                            "DocDate",
+                            new DateTime(Convert.ToInt32(ComboBox0.Value), Convert.ToInt32(ComboBox1.Value), 1)
+                        },
+                        {"InvType", isIncoming ? "13" : "18"}
+                    };
 
                     DIManager.DbUpdate("RSM_IPHY", iphyInster, Program.DiCompany, recordset.Fields.Item("Code").Value.ToString());
                 }
@@ -337,7 +343,6 @@ namespace Invoice_Income_Correction
 
         public string addJournalEntry(DateTime ReferenceDate, DateTime DueDate, DateTime TaxDate, string Reference, int BPLID, string AccountCode, double Amount, string ControlAccount, string ControlAccName, bool isIncoming)
         {
-
             SAPbobsCOM.JournalEntries journalEntries = (SAPbobsCOM.JournalEntries)Program.DiCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oJournalEntries);
             journalEntries.ReferenceDate = ReferenceDate;
             journalEntries.DueDate = DueDate;
@@ -377,7 +382,57 @@ namespace Invoice_Income_Correction
         }
 
         private PictureBox PictureBox1;
+        private Button Button1;
 
-      
+        public static bool x = false;
+
+        private void Button1_PressedAfter(object sboObject, SBOItemEventArg pVal)
+        {
+            List<PeymentsEntryReconsilation> reconcilePairsList = new List<PeymentsEntryReconsilation>();
+            for (int i = 0; i < Grid0.DataTable.Rows.Count; i++)
+            {
+                var selected = Grid0.DataTable.Columns.Item("Select").Cells.Item(i).Value.ToString();
+                var bpCradCode = Grid0.DataTable.Columns.Item("CardCode").Cells.Item(i).Value.ToString();
+                var paymentNumber = Grid0.DataTable.Columns.Item("Payment Number").Cells.Item(i).Value.ToString();
+                var journalEntryNumber = Grid0.DataTable.Columns.Item("JournalEntry Number").Cells.Item(i).Value
+                    .ToString();
+                if (selected == "N" || journalEntryNumber == "0" || string.IsNullOrWhiteSpace(journalEntryNumber))
+                {
+                    continue;
+                }
+                PeymentsEntryReconsilation reconcilePairs = new PeymentsEntryReconsilation
+                {
+                    BpCardCode = bpCradCode,
+                    JournalEntryNumber = journalEntryNumber,
+                    PaymentNumber = paymentNumber
+                };
+                reconcilePairsList.Add(reconcilePairs);
+            }
+            foreach (var recPair in reconcilePairsList)
+            {
+                SAPbouiCOM.Framework.Application.SBO_Application.OpenForm(BoFormObjectEnum.fo_BusinessPartner, "", recPair.BpCardCode);
+                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Items.Item("33").Click();
+                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Items.Item("10000024").Click();
+                Matrix internalRecolsilationMatrix = (Matrix)SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Items.Item("120000039").Specific;
+                for (int j = 0; j < internalRecolsilationMatrix.RowCount; j++)
+                {
+                    var origin = ((EditText)(internalRecolsilationMatrix.Columns.Item(4).Cells.Item(j + 1).Specific)).Value;
+                    var originNo = ((EditText)(internalRecolsilationMatrix.Columns.Item(6).Cells.Item(j + 1).Specific)).Value;
+                    if (origin == "JE" && originNo == recPair.JournalEntryNumber || origin == "RC" && originNo == recPair.PaymentNumber)
+                    {
+                        ((CheckBox)(internalRecolsilationMatrix.Columns.Item(1).Cells.Item(j + 1).Specific)).Checked = true;
+                    }
+                }
+                x = true;
+                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Items.Item("120000001").Click();
+                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
+                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
+                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
+            }
+
+        }
+
+
+
     }
 }

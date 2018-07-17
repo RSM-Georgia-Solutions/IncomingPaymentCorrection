@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows.Forms;
 using SAPbobsCOM;
-using SAPbouiCOM.Framework;
+using Application = SAPbouiCOM.Framework.Application;
 
 namespace Invoice_Income_Correction
 {
@@ -31,6 +32,7 @@ namespace Invoice_Income_Correction
                 recSet.DoQuery(query);
                 ExchangeGain = recSet.Fields.Item("LinkAct_25").Value.ToString();
                 ExchangeLoss = recSet.Fields.Item("LinkAct_21").Value.ToString();
+                Application.SBO_Application.ItemEvent += new SAPbouiCOM._IApplicationEvents_ItemEventEventHandler(SBO_Application_ItemEvent);
                 oApp.Run();
             }
             catch (Exception ex)
@@ -38,6 +40,24 @@ namespace Invoice_Income_Correction
                 System.Windows.Forms.MessageBox.Show(ex.Message);
             }
         }
+
+        private static void SBO_Application_ItemEvent(string FormUID, ref SAPbouiCOM.ItemEvent pVal,
+            out bool BubbleEvent)
+        {
+            BubbleEvent = true;
+            if (pVal.FormType == 0 && pVal.BeforeAction == false && pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_ACTIVATE && InvoiceJdtCorrection.x)
+            {
+                InvoiceJdtCorrection.x = false;
+                SAPbouiCOM.Framework.Application.SBO_Application.SendKeys("^{TAB}");
+                SAPbouiCOM.Framework.Application.SBO_Application.SendKeys("^{TAB}");
+                SAPbouiCOM.Framework.Application.SBO_Application.SendKeys("^{ENTER}");
+                //SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
+                //SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
+
+            }
+
+        }
+
 
         public static Company DiCompany;
         public static string ExchangeGain { get; set; }

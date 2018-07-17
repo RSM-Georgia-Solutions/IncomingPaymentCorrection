@@ -61,7 +61,7 @@ namespace Invoice_Income_Correction
         public void SBO_Application_MenuEvent(ref SAPbouiCOM.MenuEvent pVal, out bool BubbleEvent)
         {
             BubbleEvent = true;
-
+            
             try
             {
                 if (pVal.BeforeAction && pVal.MenuUID == "Invoice_Income_Correction.InvoiceJdtCorrection")
