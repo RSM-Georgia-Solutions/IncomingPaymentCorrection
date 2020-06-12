@@ -67,8 +67,11 @@ namespace Invoice_Income_Correction
             ComboBox2.Select("1");
             RefreshForm();
             GetItem("Item_7").FontSize = 10;
-            string path = System.IO.Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            Assembly entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly == null) return;
+            string path = System.IO.Path.GetDirectoryName(entryAssembly.Location);
             PictureBox1.Picture = "" + path + "\\RSMxxxx.jpg";
+            SAPbouiCOM.Framework.Application.SBO_Application.ItemEvent += new _IApplicationEvents_ItemEventEventHandler(this.SBO_Application_ItemEvent_ChooseFromList);
             //       PictureBox1.Picture = @"D:\Users\nkurdadze\Desktop\RSMxxxx.jpg";
         }
 
@@ -95,16 +98,18 @@ namespace Invoice_Income_Correction
 			   JOIN OCRD ON OCRD.CardCode = ORCT.CardCode      
                JOIN JDT1 on ORCT.TransID = JDT1.TransId   
 
-                WHERE YEAR(ORCT.DocDate) = {ComboBox0.Selected.Value} AND MONTH(ORCT.DocDate) = {ComboBox1.Selected.Value}   AND  U_FixedRatePayer = N'კი'  AND ORCT.Canceled = 'N'  AND ((Account = '{Program.ExchangeGain}' AND JDT1.Credit != 0) OR (Account = '{Program.ExchangeLoss}' AND JDT1.Debit != 0 and RCT2.InvType = '13' ))) a";
+                WHERE YEAR(ORCT.DocDate) = {ComboBox0.Selected.Value} AND MONTH(ORCT.DocDate) = {ComboBox1.Selected.Value}   AND  U_FixedRatePayer = N'კი'  AND ORCT.Canceled = 'N'  AND ((Account = '{Program.ExchangeGain}' AND JDT1.Credit != 0 AND (RCT2.InvType = '13'  or RCT2.InvType = '-2')) OR (Account = '{Program.ExchangeLoss}' AND JDT1.Debit != 0 and (RCT2.InvType = '13'  or RCT2.InvType = '-2')))) a";
 
                 string MergedQuerys =
-                    "select boo.#, boo.CardCode, boo.CardName,  boo.[Payment JournalEntry Number], boo.[Payment Number], boo.PaymentDocEntry, boo.[Select], foo.[JournalEntry Number] from (";
+                    "select boo.#, boo.CardCode, boo.CardName,  boo.[Payment JournalEntry Number], boo.[Payment Number], boo.PaymentDocEntry, '         ' as [CostCenter], boo.[Select], foo.[JournalEntry Number] from (";
                 MergedQuerys += generatedQuery + ") as boo left join (";
 
                 MergedQuerys += databaseQuery +
-                          ") as foo on foo.[Payment JournalEntry Number] = boo.[Payment JournalEntry Number]";
+                                ") as foo on foo.[Payment JournalEntry Number] = boo.[Payment JournalEntry Number]";
                 Grid0.DataTable.ExecuteQuery(DIManager.QueryHanaTransalte(MergedQuerys));
                 SAPbouiCOM.EditTextColumn incomingPayment = (EditTextColumn)Grid0.Columns.Item("PaymentDocEntry");
+                SAPbouiCOM.EditTextColumn costCenter = (EditTextColumn)Grid0.Columns.Item("CostCenter");
+                costCenter.ChooseFromListUID = "CostCenter";
                 incomingPayment.LinkedObjectType = "24";
             }
 
@@ -122,10 +127,10 @@ namespace Invoice_Income_Correction
 			   JOIN OCRD ON OCRD.CardCode = OVPM.CardCode      
                JOIN JDT1 on OVPM.TransID = JDT1.TransId   
 
-                WHERE YEAR(OVPM.DocDate) = {ComboBox0.Selected.Value} AND MONTH(OVPM.DocDate) = {ComboBox1.Selected.Value}   AND  U_FixedRatePayer = N'კი'  AND OVPM.Canceled = 'N'  AND ((Account = '{Program.ExchangeGain}' AND JDT1.Credit != 0) OR (Account = '{Program.ExchangeLoss}' AND JDT1.Debit != 0 and VPM2.InvType = '18' ))) a";
+                WHERE YEAR(OVPM.DocDate) = {ComboBox0.Selected.Value} AND MONTH(OVPM.DocDate) = {ComboBox1.Selected.Value}   AND  U_FixedRatePayer = N'კი'  AND OVPM.Canceled = 'N'  AND ((Account = '{Program.ExchangeGain}' AND JDT1.Credit != 0  and (VPM2.InvType = '18' or VPM2.InvType = '-2')) OR (Account = '{Program.ExchangeLoss}' AND JDT1.Debit != 0 and (VPM2.InvType = '18' or VPM2.InvType = '-2') ))) a";
 
                 string MergedQuerys =
-                    "select boo.#, boo.CardCode, boo.CardName,  boo.[Payment JournalEntry Number], boo.[Payment Number], boo.PaymentDocEntry, boo.[Select], foo.[JournalEntry Number] from (";
+                    "select boo.#, boo.CardCode, boo.CardName,  boo.[Payment JournalEntry Number], boo.[Payment Number], boo.PaymentDocEntry, '         ' as [CostCenter], boo.[Select],  foo.[JournalEntry Number] from (";
                 MergedQuerys += generatedQuery + ") as boo left join (";
 
                 MergedQuerys += databaseQuery +
@@ -157,6 +162,84 @@ namespace Invoice_Income_Correction
 
         }
 
+        private void ChooseFromList(string FormUID, ItemEvent pVal, string itemUId, string itemUIdDesc, string dataSourceId = "", string dataSourceDescId = "", bool isMatrix = false, string matrixUid = "")
+        {
+            if (pVal.EventType == BoEventTypes.et_CHOOSE_FROM_LIST)
+            {
+                string val = null;
+                string val2 = null;
+                try
+                {
+                    IChooseFromListEvent oCFLEvento = null;
+                    oCFLEvento = ((IChooseFromListEvent)(pVal));
+                    string sCFL_ID = null;
+                    sCFL_ID = oCFLEvento.ChooseFromListUID;
+                    Form oForm = null;
+                    oForm = SAPbouiCOM.Framework.Application.SBO_Application.Forms.Item(FormUID);
+                    SAPbouiCOM.ChooseFromList oCFL = null;
+                    oCFL = oForm.ChooseFromLists.Item(sCFL_ID);
+
+                    if (oCFLEvento.BeforeAction == false)
+                    {
+                        DataTable oDataTable = null;
+                        oDataTable = oCFLEvento.SelectedObjects;
+
+                        try
+                        {
+                            val = Convert.ToString(oDataTable.GetValue(0, 0));
+                            val2 = Convert.ToString(oDataTable.GetValue(1, 0));
+                        }
+                        catch (Exception ex)
+                        {
+
+                        }
+                        if (pVal.ItemUID == itemUId || pVal.ItemUID == matrixUid)
+                        {
+                            if (isMatrix)
+                            {
+                                Grid0.DataTable.SetValue(itemUId, pVal.Row, val);
+                                Grid0.DataTable.SetValue(itemUIdDesc, pVal.Row, val2);
+                            }
+                            else if (pVal.ItemUID == itemUId)
+                            {
+                                var xz = Application.SBO_Application.Forms.GetForm("BomDisassembly.Forms.DisassemblyBom", 1);
+
+                                xz.DataSources.UserDataSources.Item(dataSourceId).Value = val;
+                                if (!string.IsNullOrWhiteSpace(dataSourceDescId))
+                                {
+                                    xz.DataSources.UserDataSources.Item(dataSourceDescId).Value = val2;
+                                }
+
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                }
+            }
+        }
+
+        private void SBO_Application_ItemEvent_ChooseFromList(string FormUID, ref ItemEvent pVal, out bool BubbleEvent)
+        {
+            BubbleEvent = true;
+
+            if (pVal.FormTypeEx != "Invoice_Income_Correction.InvoiceJdtCorrection")
+            {
+                return;
+            } 
+
+            if (pVal.ColUID == "CostCenter")
+            {
+                ChooseFromList(FormUID, pVal, "CostCenter", "", "CFL_ItemCmp", "", true, "Item_6");
+            }
+
+            if ((FormUID == "CFL1") & (pVal.EventType == SAPbouiCOM.BoEventTypes.et_FORM_UNLOAD))
+            {
+                System.Windows.Forms.Application.Exit();
+            }
+        }
+
         private SAPbouiCOM.ComboBox ComboBox0;
         private SAPbouiCOM.StaticText StaticText1;
         private SAPbouiCOM.ComboBox ComboBox1;
@@ -181,6 +264,15 @@ namespace Invoice_Income_Correction
             {
                 bool checkboxChecked = Grid0.DataTable.Columns.Item("Select").Cells.Item(i).Value.ToString() == "Y";
                 string cardCode = Grid0.DataTable.Columns.Item("CardCode").Cells.Item(i).Value.ToString();
+                string costCenter = string.Empty;
+                try
+                {
+                    costCenter = Grid0.DataTable.Columns.Item("CostCenter").Cells.Item(i).Value.ToString();
+                }
+                catch (Exception)
+                {
+ 
+                }
                 string CardName = Grid0.DataTable.Columns.Item("CardName").Cells.Item(i).Value.ToString();
                 string PaymentDocEntry = Grid0.DataTable.Columns.Item("PaymentDocEntry").Cells.Item(i).Value.ToString();
                 string PaymentNumber = Grid0.DataTable.Columns.Item("Payment Number").Cells.Item(i).Value.ToString();
@@ -232,7 +324,7 @@ namespace Invoice_Income_Correction
                         result = addJournalEntry(journalEntryPayment.ReferenceDate, journalEntryPayment.DueDate,
                             journalEntryPayment.TaxDate
                             , journalEntryPayment.Reference, journalEntryPayment.Lines.BPLID, Program.ExchangeGain,
-                            exchangeRateGainCredit, BpControlAcc, cardCode, isIncoming);
+                            exchangeRateGainCredit, BpControlAcc, cardCode, isIncoming, costCenter);
                         Grid0.DataTable.SetValue("JournalEntry Number", i, result);
                         SAPbouiCOM.EditTextColumn journalEntry = (EditTextColumn)Grid0.Columns.Item("JournalEntry Number");
                         journalEntry.LinkedObjectType = "30";
@@ -242,7 +334,7 @@ namespace Invoice_Income_Correction
                         result = addJournalEntry(journalEntryPayment.ReferenceDate, journalEntryPayment.DueDate,
                             journalEntryPayment.TaxDate
                             , journalEntryPayment.Reference, journalEntryPayment.Lines.BPLID, Program.ExchangeLoss,
-                            exchangeRateLossDebit, BpControlAcc, cardCode, isIncoming);
+                            exchangeRateLossDebit, BpControlAcc, cardCode, isIncoming, costCenter);
                         Grid0.DataTable.SetValue("JournalEntry Number", i, result);
                         SAPbouiCOM.EditTextColumn journalEntry = (EditTextColumn)Grid0.Columns.Item("JournalEntry Number");
                         journalEntry.LinkedObjectType = "30";
@@ -341,7 +433,7 @@ namespace Invoice_Income_Correction
 
 
 
-        public string addJournalEntry(DateTime ReferenceDate, DateTime DueDate, DateTime TaxDate, string Reference, int BPLID, string AccountCode, double Amount, string ControlAccount, string ControlAccName, bool isIncoming)
+        public string addJournalEntry(DateTime ReferenceDate, DateTime DueDate, DateTime TaxDate, string Reference, int BPLID, string AccountCode, double Amount, string ControlAccount, string ControlAccName, bool isIncoming, string CostCode = "")
         {
             SAPbobsCOM.JournalEntries journalEntries = (SAPbobsCOM.JournalEntries)Program.DiCompany.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oJournalEntries);
             journalEntries.ReferenceDate = ReferenceDate;
@@ -357,6 +449,7 @@ namespace Invoice_Income_Correction
             journalEntries.Lines.Credit = AccountCode == Program.ExchangeGain ? -Amount : 0;
             journalEntries.Lines.FCCredit = 0;
             journalEntries.Lines.FCDebit = 0;
+            journalEntries.Lines.CostingCode = CostCode;
             journalEntries.Lines.Add();
 
             journalEntries.Lines.BPLID = BPLID;
@@ -418,16 +511,17 @@ namespace Invoice_Income_Correction
                 {
                     var origin = ((EditText)(internalRecolsilationMatrix.Columns.Item(4).Cells.Item(j + 1).Specific)).Value;
                     var originNo = ((EditText)(internalRecolsilationMatrix.Columns.Item(6).Cells.Item(j + 1).Specific)).Value;
-                    if (origin == "JE" && originNo == recPair.JournalEntryNumber || origin == "RC" && originNo == recPair.PaymentNumber)
+                    if (origin == "JE" && originNo == recPair.JournalEntryNumber || origin == "RC" || origin == "PS" && originNo == recPair.PaymentNumber)
                     {
                         ((CheckBox)(internalRecolsilationMatrix.Columns.Item(1).Cells.Item(j + 1).Specific)).Checked = true;
                     }
+
                 }
                 x = true;
-                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Items.Item("120000001").Click();
-                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
-                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
-                SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
+                //SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Items.Item("120000001").Click();
+                //SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
+                //SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
+                //SAPbouiCOM.Framework.Application.SBO_Application.Forms.ActiveForm.Close();
             }
 
         }
